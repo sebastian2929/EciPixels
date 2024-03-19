@@ -20,16 +20,19 @@ export class GameComponent implements OnInit {
   huellas = [];
   ultimaTeclaMovimiento;
 
+  private circulo: { x: number, y: number, radio: number };
+
   ngOnInit(): void {
     this.canvas = document.getElementById('lienzo') as HTMLCanvasElement;
     this.context = this.canvas.getContext('2d');
     this.gw = this.canvas.width / this.horizontal;
     this.gh = this.canvas.height / this.vertical;
-    this.posicion.x = Math.floor(this.horizontal / 2); // Centro horizontalmente
-    this.posicion.y = Math.floor(this.vertical / 2); // Centro verticalmente
+    this.posicion.x = Math.floor(this.horizontal / 2);
+    this.posicion.y = Math.floor(this.vertical / 2);
     this.crearCuadros();
     document.onkeydown = this.manejarTecla.bind(this);
     this.fillBackground();
+    this.circulo = { x: this.posicion.x, y: this.posicion.y, radio: this.gw / 2 };
   }
 
   crearCuadros() {
@@ -70,7 +73,7 @@ export class GameComponent implements OnInit {
 
     if (!this.pausado) {
       if (!this.intervalId) {
-        this.intervalId = setInterval(this.moverCuadro.bind(this), 100);
+        this.intervalId = setInterval(this.moverCuadro.bind(this), 125);
       }
     } else if (this.intervalId) {
       clearInterval(this.intervalId);
@@ -106,7 +109,7 @@ export class GameComponent implements OnInit {
     ) {
       this.fillBackground();
       this.drawHuellas();
-      this.drawSquare(this.posicion.x, this.posicion.y, 'blue');
+      this.dibujarCirculo(this.posicion.x, this.posicion.y);
       this.cuadros[this.posicion.y][this.posicion.x].visitado = true;
       this.huellas.push({ x: this.posicion.x, y: this.posicion.y });
       this.posicion.x = newX;
@@ -114,20 +117,23 @@ export class GameComponent implements OnInit {
     }
   }
 
-  drawSquare(x: number, y: number, color: string) {
-    const rx = x * this.gw;
-    const ry = y * this.gh;
-    this.context.fillStyle = color;
-    this.context.fillRect(rx, ry, this.gw, this.gh);
-    this.context.strokeStyle = 'black';
-    this.context.strokeRect(rx, ry, this.gw, this.gh);
+  dibujarCirculo(x: number, y: number) {
+    this.circulo.x = x;
+    this.circulo.y = y;
+    this.context.beginPath();
+    this.context.arc(this.circulo.x * this.gw + this.circulo.radio, this.circulo.y * this.gh + this.circulo.radio, this.circulo.radio, 0, 2 * Math.PI);
+    this.context.fillStyle = '#000D8D';
+    this.context.fill();
+    this.context.strokeStyle = '#000854';
+    this.context.lineWidth = 1.5;
+    this.context.stroke();
   }
 
   drawHuellas() {
     for (let i = 0; i < this.huellas.length; i++) {
       const huella = this.huellas[i];
       const rx = huella.x * this.gw;
-      const ry = huella.y * this.gh;
+      const ry = huella.y* this.gh;
       if (this.cuadros[huella.y][huella.x].visitado) {
         this.context.fillStyle = 'blue';
         this.context.fillRect(rx, ry, this.gw, this.gh);
@@ -147,5 +153,15 @@ export class GameComponent implements OnInit {
         this.drawSquare(j, i, cuadro.color);
       }
     }
+  }
+
+  drawSquare(x: number, y: number, color: string) {
+    const rx = x * this.gw;
+    const ry = y * this.gh;
+    this.context.fillStyle = color;
+    this.context.fillRect(rx, ry, this.gw, this.gh);
+    this.context.strokeStyle = 'black';
+    this.context.lineWidth = 2;
+    this.context.strokeRect(rx, ry, this.gw, this.gh);
   }
 }
