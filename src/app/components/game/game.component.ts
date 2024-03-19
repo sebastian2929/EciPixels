@@ -43,7 +43,7 @@ export class GameComponent implements OnInit {
 
   manejarTecla(event: KeyboardEvent) {
     if (this.pausado && ['a', 'd', 'w', 's'].includes(event.key)) {
-      this.pausado = false; // Si está pausado y se presiona una tecla de movimiento, se reanuda el juego
+      this.pausado = false;
       this.direccion = this.calcularDireccion(event.key);
     } else {
       switch (event.key) {
@@ -64,7 +64,7 @@ export class GameComponent implements OnInit {
           break;
         case 'p':
           this.pausado = !this.pausado;
-          break; // "p" key
+          break;
       }
     }
 
