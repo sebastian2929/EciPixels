@@ -14,9 +14,9 @@ export class LobbyComponent implements OnInit{
   ngOnInit(): void {
   }
 
-  startGame(){
+  startGame(): string {
     const uuid = uuidv4();
-    this.router.navigate(['/game', uuid]);
+    return '/game/${uuid}';
   }
-
 }
+
