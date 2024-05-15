@@ -215,7 +215,6 @@ private updateCells(cellToKeep: Cell, cellToDelete: Cell): void {
         }
       }
       this.visitedCells = this.visitedCells.filter(cell => cell.clr !== findClr);
-      //return this.matrix;
       return mCell;
     } catch (error: any) {
       console.error('Error calculating area:', error);
@@ -224,7 +223,6 @@ private updateCells(cellToKeep: Cell, cellToDelete: Cell): void {
   }
 
   public async deleteCells(clr: string): Promise<{ matrix: string[][], clr: string }> {
-    //await this.bds.updateGamersStateByColor(clr, 'I');
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
         if (this.matrix[i][j] === clr) {
@@ -246,7 +244,7 @@ private updateCells(cellToKeep: Cell, cellToDelete: Cell): void {
     return '#' + hexColor;
   }
 
-  public async restartGame(): Promise<String[][]> {
+  public async restartGame(): Promise<string[][]> {
     try {
       for (let i = 0; i < this.rows; i++) {
         for (let j = 0; j < this.cols; j++) {
