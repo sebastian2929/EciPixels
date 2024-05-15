@@ -1,14 +1,11 @@
 
-import { Console } from 'console';
 import WebSocket from 'ws';
 import { Cell } from '../models/cell.interface'
 
 export class MatrixService {
   private wss: WebSocket.Server;
-  //private bds: BdService;
   constructor(wss: WebSocket.Server) {
     this.wss = wss;
-    //this.bds = new BdService(wss);
     this.createMatrix();
     this.createMatrix();
   }
@@ -20,7 +17,7 @@ export class MatrixService {
   cols: number = 320; //320
   backgrounColor = '#383838'
 
-  public async getMatrixIni(mNam: string): Promise<{ matrix: String[][], activeCell: Cell }> {
+  public async getMatrixIni(mNam: string): Promise<{ matrix: string[][], activeCell: Cell }> {
     try {
       let cell: Cell;
       let clr = this.getRandomColor();
@@ -45,7 +42,7 @@ export class MatrixService {
     }
   }
 
-  public async getMatrix(): Promise<String[][]> {
+  public async getMatrix(): Promise<string[][]> {
     try {
       return this.matrix;
     }
@@ -74,47 +71,84 @@ export class MatrixService {
 
   public async activeCell(mCell: Cell): Promise<Cell> {
     try {
-      if (mCell) {
-        let count: number = this.matrix.flat().filter(cell => cell === mCell.clr).length;
-        if (count > 0) {
-          const visitedCell = this.visitedCells.find(cell => cell.row === mCell.row && cell.col === mCell.col);
-          if (visitedCell) {
-            if (visitedCell.tim < mCell.tim) {
-              this.deleteCells(visitedCell.clr);
-              this.visitedCells = this.visitedCells.filter(cell => cell.clr !== visitedCell.clr);
-              this.matrix[mCell.row][mCell.col] = mCell.clr;
-            } else {
-              this.deleteCells(mCell.clr);
-              this.visitedCells = this.visitedCells.filter(cell => cell.clr !== mCell.clr);
-              this.matrix[visitedCell.row][visitedCell.col] = visitedCell.clr;
-            }
-          }
-          else {
-            /// Valida fronteras límites
-            if (mCell.row < 1 || mCell.row > this.rows - 2 || mCell.col < 1 || mCell.col > this.cols - 2) {
-              mCell.val = 'gameover';
-            } else {
-              this.matrix[mCell.row][mCell.col] = mCell.clr;
-              if (mCell.val != 'ini') {
-                this.visitedCells.push(mCell);
-              }
-              mCell.val = 'ok';
-            }
-          }
-          if (mCell.val === 'gameover'){
-            this.topPlayers = this.topPlayers.filter(player => player[0] !== mCell.nam);
-          }
-
-        } else {
-          mCell.val = 'gameover';
+        if (!mCell) {
+            return this.handleGameOver(mCell);
         }
-      }
-      return mCell;
+
+        const count: number = this.getCountOfCells(mCell.clr);
+
+        if (count > 0) {
+            const visitedCell = this.getVisitedCell(mCell);
+            if (visitedCell) {
+                this.updateVisitedCell(visitedCell, mCell);
+            } else {
+                this.handleNewCellWithinBounds(mCell);
+            }
+        } else {
+            return this.handleGameOver(mCell);
+        }
+
+        return mCell;
     } catch (error) {
-      console.error('Error updating cell:', error);
-      throw error;
+        console.error('Error updating cell:', error);
+        throw error;
     }
-  }
+}
+
+private getCountOfCells(color: string): number {
+    return this.matrix.flat().filter(cell => cell === color).length;
+}
+
+private getVisitedCell(cell: Cell): Cell | undefined {
+    return this.visitedCells.find(c => c.row === cell.row && c.col === cell.col);
+}
+
+private updateVisitedCell(visitedCell: Cell, newCell: Cell): void {
+    if (visitedCell.tim < newCell.tim) {
+        this.updateCells(visitedCell, newCell);
+    } else {
+        this.updateCells(newCell, visitedCell);
+    }
+}
+
+private handleNewCellWithinBounds(cell: Cell): void {
+    if (this.isWithinBounds(cell)) {
+        this.updateMatrixAndVisitedCells(cell);
+        cell.val = 'ok';
+    } else {
+        this.handleGameOver(cell);
+    }
+}
+
+private handleGameOver(cell: Cell): Cell {
+    cell.val = 'gameover';
+    if (cell.val === 'gameover') {
+        this.removePlayerFromTopPlayers(cell.nam);
+    }
+    return cell;
+}
+
+private isWithinBounds(cell: Cell): boolean {
+    return cell.row >= 1 && cell.row <= this.rows - 2 && cell.col >= 1 && cell.col <= this.cols - 2;
+}
+
+private updateMatrixAndVisitedCells(cell: Cell): void {
+    this.matrix[cell.row][cell.col] = cell.clr;
+    if (cell.val !== 'ini') {
+        this.visitedCells.push(cell);
+    }
+}
+
+private removePlayerFromTopPlayers(playerName: string): void {
+    this.topPlayers = this.topPlayers.filter(player => player[0] !== playerName);
+}
+
+private updateCells(cellToKeep: Cell, cellToDelete: Cell): void {
+    this.deleteCells(cellToKeep.clr);
+    this.visitedCells = this.visitedCells.filter(cell => cell.clr !== cellToKeep.clr);
+    this.matrix[cellToDelete.row][cellToDelete.col] = cellToDelete.clr;
+}
+
 
   public async calcArea(findClr: string): Promise<Cell[]> {
     try {

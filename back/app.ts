@@ -3,7 +3,6 @@ import http from 'http';
 import cluster from 'cluster';
 import WebSocket from 'ws';
 import { MatrixController } from './controllers/matrix.controller';
-import { WebsocketController } from './controllers/websocket.controller';
 
 const numCPUs = require('os').cpus().length;
 const app = express();
@@ -35,7 +34,6 @@ if (cluster.isMaster) {
 
 
     const matrixController = new MatrixController(wss);
-    const websocketController = new WebsocketController(wss, matrixController);
 
     server.listen(port, () => {
         console.log(`Worker ${process.pid} started`);
