@@ -1,10 +1,9 @@
 
+import { Console } from 'console';
 import WebSocket from 'ws';
 import { Cell } from '../models/cell.interface'
 
 export class MatrixService {
-
-  private playerName: string;
   private wss: WebSocket.Server;
   //private bds: BdService;
   constructor(wss: WebSocket.Server) {
@@ -14,77 +13,35 @@ export class MatrixService {
     this.createMatrix();
   }
 
-  topPlayers: { name: string, clr: string, numCell: number }[] = [];
+  topPlayers: [nam: string, clr: string, numCell: number][] = [];
   matrix: string[][] = [];
   visitedCells: Cell[] = [];
-  rows: number = 100; //320
-  cols: number = 100; //320
+  rows: number = 320; //320
+  cols: number = 320; //320
   backgrounColor = '#383838'
 
-  public async getMatrixIni(): Promise<{ matrix: string[][], activeCell: Cell }> {
+  public async getMatrixIni(mNam: string): Promise<{ matrix: String[][], activeCell: Cell }> {
     try {
-        let cell: Cell;
-        let clr = this.getRandomColor();
-        let nam = this.playerName;
-        
-        if (clr !== "") {
-            const { row, col } = this.getRandomPosition();
-            this.fillMatrixRegion(row, col, clr);
-            cell = { row, col, clr, tim: 0, val: "", nam };        
-            this.addToTopPlayers(this.playerName, clr, 0); // Agregar jugador a topPlayers
-        } else {
-            cell = { row: 0, col: 0, clr, tim: 0, val: "", nam: this.playerName };
-        }
-
-        return { matrix: this.matrix, activeCell: cell };
-    } catch (error) {
-        console.error('Error creating matrix:', error);
-        throw error;
-    }
-  }
-
-  private addToTopPlayers(name: string, clr: string, numCell: number): void {
-    this.topPlayers.push({ name: name, clr, numCell });}
-
-  
-  
-  private getRandomPosition(): { row: number, col: number } {
-    let isValidPosition = false;
-    let row = 0;
-    let col = 0;
-  
-    // Keep generating random positions until a valid one is found
-    while (!isValidPosition) {
-      row = Math.floor(Math.random() * (this.rows - 8)) + 4;
-      col = Math.floor(Math.random() * (this.cols - 8)) + 4;
-  
-      // Check if the surrounding 4x4 region has the background color
-      isValidPosition = this.isSurroundingRegionBackground(row, col);
-    }
-  
-    return { row, col };
-  }
-  
-  private isSurroundingRegionBackground(row: number, col: number): boolean {
-    // Check the surrounding 4x4 region for non-background colors
-    for (let i = row - 4; i <= row + 4; i++) {
-      for (let j = col - 4; j <= col + 4; j++) {
-        if (i >= 0 && i < this.rows && j >= 0 && j < this.cols) {
-          if (this.matrix[i][j] !== this.backgrounColor) {
-            return false; // Non-background color found, position is invalid
+      let cell: Cell;
+      let clr = this.getRandomColor();
+      if (clr !== "") {
+        let row = Math.floor(Math.random() * (this.rows - 8)) + 4;
+        let col = Math.floor(Math.random() * (this.cols - 8)) + 4;
+        for (let i = row - 1; i <= row + 1; i++) {
+          for (let j = col - 1; j <= col + 1; j++) {
+            this.matrix[i][j] = clr;
           }
         }
+        cell = { row, col, clr, tim: 0, val: "", nam: mNam }
+      } else {
+        cell = { row: 0, col: 0, clr, tim: 0, val: "", nam: mNam }
       }
+      this.topPlayers.push([mNam, clr, 0]);
+      return { matrix: this.matrix, activeCell: cell };
     }
-    return true; // All cells in the surrounding region have the background color
-  }
-  
-  
-  private fillMatrixRegion(row: number, col: number, clr: string): void {
-    for (let i = row - 1; i <= row + 1; i++) {
-      for (let j = col - 1; j <= col + 1; j++) {
-        this.matrix[i][j] = clr;
-      }
+    catch (error) {
+      console.error('Error creating matrix:', error);
+      throw error;
     }
   }
 
@@ -103,25 +60,16 @@ export class MatrixService {
       for (let i = 0; i < this.rows; i++) {
         this.matrix[i] = [];
         for (let j = 0; j < this.cols; j++) {
-          this.matrix[i][j] = this.getInitialCellColor(i, j);
+          if (i === 0 || i === this.rows - 1 || j === 0 || j === this.cols - 1) {
+            this.matrix[i][j] = "#2b2828";
+          } else
+            this.matrix[i][j] = this.backgrounColor;
         }
       }
     } catch (error) {
       console.error('Error creating matrix:', error);
       throw error;
     }
-  }
-  
-  private getInitialCellColor(row: number, col: number): string {
-    if (this.isBoundaryCell(row, col)) {
-      return "#494949";
-    } else {
-      return this.backgrounColor;
-    }
-  }
-  
-  private isBoundaryCell(row: number, col: number): boolean {
-    return row === 0 || row === this.rows - 1 || col === 0 || col === this.cols - 1;
   }
 
   public async activeCell(mCell: Cell): Promise<Cell> {
@@ -142,10 +90,10 @@ export class MatrixService {
             }
           }
           else {
+            /// Valida fronteras límites
             if (mCell.row < 1 || mCell.row > this.rows - 2 || mCell.col < 1 || mCell.col > this.cols - 2) {
               mCell.val = 'gameover';
-              this.topPlayers = this.topPlayers.filter(player => player.name !== mCell.nam);
-          } else {
+            } else {
               this.matrix[mCell.row][mCell.col] = mCell.clr;
               if (mCell.val != 'ini') {
                 this.visitedCells.push(mCell);
@@ -153,6 +101,10 @@ export class MatrixService {
               mCell.val = 'ok';
             }
           }
+          if (mCell.val === 'gameover'){
+            this.topPlayers = this.topPlayers.filter(player => player[0] !== mCell.nam);
+          }
+
         } else {
           mCell.val = 'gameover';
         }
@@ -166,7 +118,7 @@ export class MatrixService {
 
   public async calcArea(findClr: string): Promise<Cell[]> {
     try {
-      let mCell: Cell[]=[];
+      let mCell: Cell[] = [];
       // Calculate mins and maxs
       let minRow = Number.MAX_SAFE_INTEGER;
       let minCol = Number.MAX_SAFE_INTEGER;
@@ -222,13 +174,13 @@ export class MatrixService {
             //Si se encuntran los 4 límites se pinda del color
             if (paso === 4) {
               this.matrix[r][c] = findClr;
-              mCell.push ( { row: r, col: c, val : '', nam: '', clr: findClr, tim :-99});
+              mCell.push({ row: r, col: c, val: '', nam: '', clr: findClr, tim: -99 });
               paso = 0;
             }
           }
         }
       }
-      this.visitedCells = this.visitedCells.filter(cell => cell.clr !== findClr );
+      this.visitedCells = this.visitedCells.filter(cell => cell.clr !== findClr);
       //return this.matrix;
       return mCell;
     } catch (error: any) {
@@ -246,7 +198,7 @@ export class MatrixService {
         }
       }
     }
-
+    this.topPlayers = this.topPlayers.filter(player => player[1] !== clr);
     return { matrix: this.matrix, clr: clr };
   }
 
@@ -277,38 +229,29 @@ export class MatrixService {
 
   public async getTop() {
     try {
-        // Reiniciar el recuento de puntos para todos los jugadores
-        this.topPlayers.forEach(player => {
-            player.numCell = 0;
+      // Reiniciar el recuento de puntos para todos los jugadores
+      this.topPlayers.forEach(player => {
+        player[2] = 0;
+      });
+
+      // Calcular el recuento de puntos para cada jugador en la matriz
+      this.matrix.forEach(row => {
+        row.forEach(element => {
+          const playerIndex = this.topPlayers.findIndex(player => player[1] === element);
+          if (playerIndex !== -1) {
+            this.topPlayers[playerIndex][2]++;
+          }
         });
+      });
 
-        // Calcular el recuento de puntos para cada jugador en la matriz
-        this.matrix.forEach(row => {
-            row.forEach(element => {
-                const player = this.topPlayers.find(player => player.clr === element);
-                if (player) {
-                    player.numCell++;
-                }
-            });
-        });
-
-        // Filtrar los jugadores con puntos y ordenar la lista por puntaje
-        const playersWithPoints = this.topPlayers.filter(player => player.numCell > 0);
-        return playersWithPoints.sort((a, b) => b.numCell - a.numCell).slice(0, 5);
+      // Filtrar los jugadores con puntos y ordenar la lista por puntaje
+      const playersWithPoints = this.topPlayers.filter(player => player[2] > 0);
+      return playersWithPoints.sort((a, b) => b[2] - a[2]).slice(0, 5);
     } catch (error) {
-        console.error('Error getting top:', error);
-        throw error;
-    }
-}
-
-  
-  public async setName(nam: string){
-    try {
-      this.playerName = nam;
-    } catch (error) {
-      console.error('Error setting name:', error);
+      console.error('Error getting top:', error);
       throw error;
     }
   }
+
 }
 

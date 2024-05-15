@@ -2,7 +2,6 @@ import { Component, OnInit, TemplateRef } from '@angular/core';
 import { ViewChild, ElementRef } from '@angular/core';
 import { WebsocketService } from '../../services/websocket.service';
 import { Cell } from '../../models/cell.interface'
-import { NgForm } from '@angular/forms';
 
 @Component({
   selector: 'app-matrix',
@@ -16,11 +15,12 @@ export class MatrixComponent implements OnInit {
   @ViewChild('canvasMin') canvasMin!: ElementRef<HTMLCanvasElement>;
   @ViewChild('canvasTop') canvasTop!: ElementRef<HTMLCanvasElement>;
 
-  topPlayers: { name: string, clr: string, numCell: number }[] = [];
+  topPlayers: [nam: string, clr: string, numCell: number][] = [];
   rows: number = 0
   cols: number = 0
   matrix: string[][] = [];
   visitedCells: Cell[] = [];
+  orangeCells: Cell[] = [];
   cellSize: number = -1;
   activeCell: Cell;
 
@@ -34,10 +34,10 @@ export class MatrixComponent implements OnInit {
 
 
   paintInterval: any;
-  paintIntervalDuration: number = 100;
+  paintIntervalDuration: number = 120;
   padding = 10;
-  windowWidth: number = window.innerWidth + 120;
-  windowHeight: number = window.innerHeight + 120;
+  windowWidth: number = window.innerWidth;
+  windowHeight: number = window.innerHeight;
   canvasContext: CanvasRenderingContext2D | null = null;
   canvasContextMin: CanvasRenderingContext2D | null = null;
   canvasContextTop: CanvasRenderingContext2D | null = null;
@@ -92,7 +92,7 @@ export class MatrixComponent implements OnInit {
         this.canvasMin.nativeElement.width = (this.canvas.nativeElement.width * 11) / 100
         this.canvasMin.nativeElement.height = (this.canvas.nativeElement.height * 16) / 100
         this.canvasTop.nativeElement.width = (this.canvas.nativeElement.width * 15) / 100
-        this.canvasTop.nativeElement.height = (this.canvas.nativeElement.height * 10) / 100
+        this.canvasTop.nativeElement.height = (this.canvas.nativeElement.height * 20) / 100
         this.activeCell = (message.data.activeCell);
         this.visitedCells = [];
         this.clr = (message.data.activeCell.clr);
@@ -107,7 +107,6 @@ export class MatrixComponent implements OnInit {
         this.paintMatrix();
         this.moveScroll('b');
         this.websocketService.sendMessage('getTop', {});
-
       }
       else {
         console.log('Mensaje del componente, el message.data no regresó la matrix');
@@ -118,7 +117,8 @@ export class MatrixComponent implements OnInit {
       if (cell) {
         if (cell.val === 'ok') {
           this.matrix[cell.row][cell.col] = cell.clr
-          this.paintCellOk(cell);
+          this.paintCell(cell.row, cell.col);
+          this.paintCellOk(cell.row, cell.col, cell.clr);
         }
         if (cell.val === 'gameover') {
           this.websocketService.sendMessage('deleteCells', cell.clr);
@@ -151,41 +151,52 @@ export class MatrixComponent implements OnInit {
         ////this.websocketService.sendMessage('activeCell', cell);    
         this.matrix[cell.row][cell.col] = cell.clr;
         cell.nam = this.nam;
-        this.paintCellOk(cell);
+        this.paintCellOk(cell.row, cell.col, cell.clr);
       });
       this.websocketService.sendMessage('getTop', {});
+      this.paintMatrixMin();
     }
-    if(message.action === 'getTop'){
-      this.topPlayers = message.data;      
+    if (message.action === 'getTop') {
+      this.topPlayers = message.data;
       this.paintMatrixTop();
     }
   }
-
 
 
   paintMatrix(): void {
     if (this.matrix) {
       for (let i = 0; i < this.rows; i++) {
         for (let j = 0; j < this.cols; j++) {
-          const x = j * this.cellSize;
-          const y = i * this.cellSize;
-  
-          // Verifica si es la celda activa
-          const isActiveCell = i === this.activeCell.row && j === this.activeCell.col;
-  
-          // Rellena la celda con el color correspondiente
-          this.canvasContext!.fillStyle = this.matrix[i][j];
-          this.canvasContext!.fillRect(x, y, this.cellSize, this.cellSize);
+          this.paintCellOk(i, j, this.matrix[i][j]);
         }
       }
-      this.paintMatrixMin();
-      this.paintMatrixTop();
     }
   }
-  
-  
-  
-  
+
+
+  paintCell(rowDelta: number, colDelta: number): void {
+    if (rowDelta === 1) {
+      this.moveScroll('t');
+    }
+    if (colDelta === 1) {
+      this.moveScroll('l');
+    }
+    if (rowDelta === -1) {
+      this.moveScroll('t');
+    }
+    if (colDelta === -1) {
+      this.moveScroll('l');
+    }
+    const { row, col } = this.activeCell;
+    this.paintCellOk(row, col, this.clr);
+  }
+
+  paintCellOk(row: number, col: number, clr: string): void {
+    const currentRow = row * this.cellSize;
+    const currentCol = col * this.cellSize;
+    this.canvasContext!.fillStyle = clr;
+    this.canvasContext!.fillRect(currentCol, currentRow, this.cellSize, this.cellSize);
+  }
 
   async paintMatrixMin() {
     if (this.matrix) {
@@ -194,11 +205,11 @@ export class MatrixComponent implements OnInit {
         for (let j = 0; j < this.cols; j++) {
           const x = j * mCellSize;
           const y = i * mCellSize;
-          this.canvasContextMin!.strokeStyle = "#272625"; // Color del borde
-          this.canvasContextMin!.lineWidth = (mCellSize * 40) / 100; // Grosor del borde
-          this.canvasContextMin!.strokeRect(x, y, mCellSize, mCellSize);
-          // Rellena la celda con el color correspondiente
-          this.canvasContextMin!.fillStyle = this.matrix[i][j];
+          if (this.matrix[i][j] == '#383838') {
+            this.canvasContextMin!.fillStyle = '#7c7b7b';
+          } else {
+            this.canvasContextMin!.fillStyle = this.matrix[i][j];
+          }
           this.canvasContextMin!.fillRect(x, y, mCellSize, mCellSize);
         }
       }
@@ -210,37 +221,18 @@ export class MatrixComponent implements OnInit {
     if (this.topPlayers && this.canvasContextTop) { // Comprueba si topPlayers y canvasContextTop existen
       // Limpiar el lienzo
       this.canvasContextTop.clearRect(0, 0, this.canvasContextTop.canvas.width, this.canvasContextTop.canvas.height);
-  
+      this.canvasContextTop!.fillStyle = 'white';
       // Agregar el texto "Leaderboard" en la parte superior
-      this.canvasContextTop.fillStyle = 'black';
-      this.canvasContextTop.font = 'bold 17px Arial'; // Establecer la fuente y el tamaño del texto
-      this.canvasContextTop.fillText('Leaderboard', 8, 25);
-  
+      this.canvasContextTop.font = 'normal 16px Arial'; // Establecer la fuente y el tamaño del texto
+      this.canvasContextTop.fillText('Leaderboard', 10, 30);
       // Dibujar la información de los jugadores
       this.topPlayers.forEach((player, index) => {
-        if (typeof player === 'object' && 'name' in player && 'numCell' in player) {
-          // Si player es un objeto con las propiedades 'name' y 'numCell', extraemos las propiedades
-          const playerName = player.name.toString();
-          const score = player.numCell;
-          this.canvasContextTop!.fillStyle = 'black';
-          this.canvasContextTop!.fillText(`${index + 1}. ${playerName} - ${score}`, 10, 46 + index * 20);
-          console.log(score);
-          console.log(playerName);
-          
-          
-        } else {
-          // Si player no es un objeto válido, lo ignoramos o lo tratamos de manera diferente
-          console.log(`Elemento en topPlayers en la posición ${index} no es válido.`);
-          // Podrías omitirlo, lanzar un error, o manejarlo de otra manera según tus necesidades
-        }
+        const [name, , score] = player; // Ignoramos el color
+        // Dibujar el nombre y el puntaje del jugador
+        this.canvasContextTop!.fillText(`${index + 1}. ${name} - ${score}`, 10, 60 + index * 30);
       });
     }
   }
-
-
-
-
-
 
 
   //Evitar tecla oprimida y mantenida
@@ -259,12 +251,19 @@ export class MatrixComponent implements OnInit {
       if (direction) {
         //controla que si mantienen oprimida la misma flecha no se validará
         if (this.prevDirection !== direction[0] + '' + direction[1]) {
+          if(this.prevDirection !== direction[0] + '' + direction[1]) {
+            this.orangeCells.forEach(cell => {
+              this.paintCellOk(cell.row, cell.col, this.clr)
+            });
+            this.orangeCells = [];
           clearInterval(this.paintInterval);
+          }
           this.move(direction[0], direction[1]);
           this.prevDirection = direction[0] + '' + direction[1]
           this.paintInterval = setInterval(() => {
             //see coloca dentro de un interval para que se ejecute continuamente
             // hasta que el jugador cambie de flecha
+            this.paintCell(direction[0], direction[1]);
             this.move(direction[0], direction[1]);
           }, this.paintIntervalDuration);
         }
@@ -277,55 +276,52 @@ export class MatrixComponent implements OnInit {
     const nRow = this.activeCell.row + rowDelta;
     const nCol = this.activeCell.col + colDelta;
     // actualiza la celda 
-    //PILAS el this.getTim obtiene el tiempo en el que la celda fue activa yyyymmddhhh24missfff hast amilisegundos
-    // ese tiempo en el back sirce para identificar el tiempo de colisión 
+    //PILAS el this.getTim obtiene el tiempo en el que la celda fue activa yyyymmddhhh24missfff hasta milisegundos
+    // ese tiempo en el back sirve para identificar el tiempo de colisión 
     this.activeCell = { row: nRow, col: nCol, clr: this.clr, tim: this.getTim(), val: '', nam: this.nam };
-    //busca si la celda ya fue visitada 
+    // busca si la celda ya fue visitada 
     const visitedCell = this.visitedCells.slice(1, this.visitedCells.length - 1).find(cell => cell.row === nRow && cell.col === nCol);
     if (visitedCell) {
       // ya fue visitada
       this.gameover = true;
-      //borra las celdas del jugador "gameover"
-      this.websocketService.sendMessage('deleteCells', this.activeCell.clr);
-      //deja en blanco las celdas
+      // borra las celdas del jugador "gameover"
+      this.websocketService.sendMessage('deleteCells', this.clr);
+      // deja en blanco las celdas
       this.visitedCells = [];
+      // Restablece las celdas pintadas de naranja
+      this.orangeCells.forEach(cell => {
+        this.paintCellOk(cell.row, cell.col, this.clr);
+      });
+      this.orangeCells = [];
     } else {
       if (this.matrix[nRow][nCol] === this.activeCell.clr && this.visitedCells.length > 0) {
-        //Cerró el bucle
-        // enviar la back para calcular el area ganad
+        // Cerró el bucle
+        // enviar la back para calcular el área ganada
         this.websocketService.sendMessage('calcArea', this.activeCell.clr);
         this.visitedCells = [];
       } else {
-        // si ningina de las anteriores se adiciona a las celdas visitadas
+        // si ninguna de las anteriores se adiciona a las celdas visitadas
         if (this.matrix[nRow][nCol] !== this.activeCell.clr) {
           this.visitedCells.push(this.activeCell);
-          //enviar la celda activa para que se marque en la matris.srvice
+          // Eliminar las celdas pintadas de naranja que ya no están activas
+          this.orangeCells.forEach(cell => {
+            if (!this.visitedCells.some(vc => vc.row === cell.row && vc.col === cell.col)) {
+              this.paintCellOk(cell.row, cell.col, this.clr);
+            }
+          });
+          this.orangeCells = [];
+          // enviar la celda activa para que se marque en la matriz del servicio
           this.websocketService.sendMessage('activeCell', this.activeCell);
         }
       }
-      //pinta la celda en la matrix del jugador
-      this.dirScroll(rowDelta, colDelta);
-      // verificar colisión
-      //Como erificar la colición??
-      // en el back matrix.service en activiCell() colocar esta validación
+      // pinta la celda en la matriz del jugador
+      this.paintCellOk(nRow, nCol, this.activeCell.clr);
+      this.paintCellOk(nRow, nCol, 'orange');
+      this.orangeCells.push(this.activeCell);
     }
   }
+  
 
-  dirScroll(rowDelta: number, colDelta: number): void {
-    if (rowDelta === 1) {
-      //mueve el scroll para dejar siempre visible al jugador la celda activa
-      this.moveScroll('t');
-    }
-    if (colDelta === 1) {
-      this.moveScroll('l');
-    }
-    if (rowDelta === -1) {
-      this.moveScroll('t');
-    }
-    if (colDelta === -1) {
-      this.moveScroll('l');
-    }
-  }
 
   moveScroll(direction: string) {
     if (this.scrollContainer !== null) {
@@ -351,28 +347,16 @@ export class MatrixComponent implements OnInit {
     }
   }
 
-  paintCellOk(cell: Cell): void {
-    //Pinta la celda que llega del WS y es "ok"
-    const { row, col, clr } = cell;
-    this.canvasContext!.fillStyle = cell.clr;
-    let currentRow = row * this.cellSize;
-    let currentCol = col * this.cellSize;
-    const rightX = (col + 1) * this.cellSize;
-    this.canvasContext!.clearRect(currentCol, currentRow, 1, this.cellSize);
-    this.canvasContext!.fillRect(currentCol, currentRow, this.cellSize, this.cellSize);
-  }
 
   //Calcula eltiemo en milisegundos en el que se activa la celda en formato numerioc yyyymmddhh24missfff
   getTim(): number {
     return +`${new Date().toISOString().replace(/\D/g, '').slice(0, -1)}${new Date().getMilliseconds().toString().padStart(3, '0')}`;
   }
 
-
   startGame() {
-    const name = this.nam;
-    this.websocketService.sendMessage('setName', name);
-    //this.websocketService.sendMessage('getMatrixIni', {});
+    this.websocketService.sendMessage('getMatrixIni', this.nam);
     this.closePopup();
+    this.paintMatrixMin();
   }
 
   restartGame() {
