@@ -1,0 +1,32 @@
+# Node.js #
+###########
+**/node_modules/
+/back/npm-debug.log
+
+# Angular #
+###########
+/front/dist/
+/front/*.log
+
+# Visual Studio #
+################
+.vs/
+/bin/
+/obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.pdb
+
+# IntelliJ IDEA #
+################
+.idea/
+*.iml
+*.iws
+*.ipr
+*.iws.xml
+*.swp
+*.log
+/out/
+/build/

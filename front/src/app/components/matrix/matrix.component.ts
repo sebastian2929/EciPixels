@@ -206,7 +206,7 @@ export class MatrixComponent implements OnInit {
   paintMatrixTop(): void {
     if (this.topPlayers && this.canvasContextTop) {
       this.canvasContextTop.clearRect(0, 0, this.canvasContextTop.canvas.width, this.canvasContextTop.canvas.height);
-      this.canvasContextTop!.fillStyle = 'white';
+      this.canvasContextTop.fillStyle = 'white'; // No es necesario utilizar la afirmación de no nulidad aquí
       this.canvasContextTop.font = 'normal 16px Arial';
       this.canvasContextTop.fillText('Leaderboard', 10, 30);
       this.topPlayers.forEach((player, index) => {
@@ -215,7 +215,7 @@ export class MatrixComponent implements OnInit {
       });
     }
   }
-
+  
   prevDirection: string = '';
   handleKeyDown(event: KeyboardEvent): void {
     if (!this.gameover) {
@@ -288,16 +288,14 @@ export class MatrixComponent implements OnInit {
       const targetLeft = (this.cellSize * this.activeCell.col) - (this.windowWidth / 2) + this.padding * 2;
       if (direction === 't') {
         this.scrollContainer.nativeElement.scrollTop = targetTop;
+      } else if (direction === 'l') {
+        this.scrollContainer.nativeElement.scrollLeft = targetLeft;
       } else {
-        if (direction === 'l') {
-          this.scrollContainer.nativeElement.scrollLeft = targetLeft;
-        } else {
-          this.scrollContainer.nativeElement.scrollTo({
-            top: targetTop,
-            left: targetLeft,
-            behavior: 'smooth'
-          });
-        }
+        this.scrollContainer.nativeElement.scrollTo({
+          top: targetTop,
+          left: targetLeft,
+          behavior: 'smooth'
+        });
       }
     }
   }
