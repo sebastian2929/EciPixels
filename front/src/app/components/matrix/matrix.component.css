@@ -1,0 +1,114 @@
+.scroll-container {
+  box-sizing: border-box;
+  text-align: center; /* Centra horizontalmente el contenido */
+  overflow: scroll; /* Mantener las barras de desplazamiento visibles */
+  scrollbar-width: none; /* Ocultar la barra de desplazamiento nativa en Firefox */
+  -ms-overflow-style: none; /* Ocultar la barra de desplazamiento nativa en Internet Explorer y Edge */ 
+}
+
+/* Ocultar la barra de desplazamiento en Chrome, Safari y Edge basado en Chromium */
+.scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-content {
+  display: inline-block; /* Permite que el contenedor se centre horizontalmente */
+  vertical-align: middle; /* Centra verticalmente el contenido */
+}
+.row {
+  display: flex; /* Para que las celdas se muestren en línea */
+}
+
+.canvas{
+  transition: transform 0.3s ease; /* Agregar transición para suavizar el movimiento */
+  position: relative; /* Asegurarse de que el contenedor tenga una posición relativa o absoluta */
+  background-color: orange;
+}
+
+.canvas-min {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  opacity: 0.9;
+  z-index: 2; /* Asigna un índice z mayor al segundo canvas */
+  border-radius: 4px;
+}
+
+.canvas-top {
+  position: fixed; /* Utiliza 'fixed' para fijar el canvas en una posición fija en la ventana */
+  top:  24px; /* Ajusta la posición desde la parte superior */
+  right: 0px; /* Ajusta la posición desde la derecha */
+  opacity: 0.5;
+  z-index: 3; /* Asigna un índice z mayor al segundo canvas */
+  border-radius: 4px;
+  background-color: #ccc;
+}
+
+/*zsdfdfadsf*/
+.background-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 0; /* Cambiamos el z-index */
+  overflow: hidden;
+  filter: blur(0);
+  transition: filter 0.5s;
+}
+
+/* Estilos para el contenedor principal */
+.container {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+/* Estilos para el contenedor del formulario */
+.form-container {
+  background-color: rgb(196, 196, 196);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(67, 166, 205, 1.5);
+}
+
+/* Estilos para el campo de entrada */
+input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+}
+
+/* Estilos para el botón */
+button {
+  padding: 10px 20px;
+  background-color: #6CA6CD;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+/* Estilos para el botón al pasar el ratón por encima */
+button:hover {
+  background-color: #494949;
+}
+
+/* Aplicamos la animación al h2 */
+.title {
+  font-family: 'Arial', sans-serif;
+  animation: bounce 2s infinite;
+  color: #000; /* Ajustamos el color del texto */
+  background: linear-gradient(to right, #6CA6CD, #FFA07A, #FF69B4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

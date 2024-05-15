@@ -1,0 +1,24 @@
+<div *ngIf="showPopup" class="background-container">
+  <div class="container">
+    <div class="form-container">
+      <form id="p" class="a" (ngSubmit)="startGame()" #gameForm="ngForm">
+        <h2 class="title">EciPixels</h2>
+        <input type="text" id="name" name="name" [(ngModel)]="nam" placeholder="Jugador" required ngModel #name="ngModel" maxlength="14">
+        <button type="submit" [disabled]="gameForm.invalid">Start game</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="scroll-container" #scrollContainer tabindex="0" 
+  [style.height.px]="windowHeight -40"
+  [style.width.px]="windowWidth -20" 
+  [style.padding.px]="padding" >
+  <div class="scroll-content"  >
+    <canvas #canvas tabindex="0" >
+    </canvas>
+  </div>
+</div>
+
+<canvas #canvasMin class="canvas-min" [hidden]="showPopup"></canvas>
+<canvas #canvasTop class="canvas-top" [hidden]="showPopup"></canvas>
