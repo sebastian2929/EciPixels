@@ -36,7 +36,7 @@ if (cluster.isMaster) {
 
     const matrixController = new MatrixController(wss);
 
-    const websocketController = new WebsocketController(wss, matrixController);
+    new WebsocketController(wss, matrixController);
 
     server.listen(port, () => {
         console.log(`Worker ${process.pid} started`);

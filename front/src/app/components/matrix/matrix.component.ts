@@ -104,7 +104,7 @@ export class MatrixComponent implements OnInit {
         console.log('Unhandled message action:', message.action);
     }
   }
-  
+
   private handleGetMatrixIni(message: any): void {
     if (message.data) {
       this.initializeMatrix(message.data);
@@ -115,7 +115,7 @@ export class MatrixComponent implements OnInit {
       console.log('Mensaje del componente, el message.data no regresó la matrix');
     }
   }
-  
+
   private initializeMatrix(data: any): void {
     this.matrix = data.matrix;
     this.rows = this.matrix.length;
@@ -132,7 +132,7 @@ export class MatrixComponent implements OnInit {
     this.clr = data.activeCell.clr;
     this.prevDirection = "";
     this.gameover = false;
-  
+
     for (let i = this.activeCell.row - 1; i <= this.activeCell.row + 1; i++) {
       for (let j = this.activeCell.col - 1; j <= this.activeCell.col + 1; j++) {
         const cell = { row: i, col: j, clr: this.clr, tim: this.getTim(), val: 'ini', nam: this.nam };
@@ -140,7 +140,7 @@ export class MatrixComponent implements OnInit {
       }
     }
   }
-  
+
   private handleActiveCell(message: any): void {
     const cell = message.data;
     if (cell) {
@@ -152,13 +152,13 @@ export class MatrixComponent implements OnInit {
       }
     }
   }
-  
+
   private handleCellOk(cell: any): void {
     this.matrix[cell.row][cell.col] = cell.clr;
     this.paintCell(cell.row, cell.col);
     this.paintCellOk(cell.row, cell.col, cell.clr);
   }
-  
+
   private handleDeleteCells(message: any): void {
     this.matrix = message.data.matrix;
     this.paintMatrix();
@@ -169,12 +169,12 @@ export class MatrixComponent implements OnInit {
       this.openPopup();
     }
   }
-  
+
   private handleMatrixUpdate(data: any): void {
     this.matrix = data;
     this.paintMatrix();
   }
-  
+
   private handleCalcArea(data: any): void {
     const mCell: Cell[] = data;
     mCell.forEach((cell) => {
@@ -185,12 +185,12 @@ export class MatrixComponent implements OnInit {
     this.websocketService.sendMessage('getTop', {});
     this.paintMatrixMin();
   }
-  
+
   private handleGetTop(data: any): void {
     this.topPlayers = data;
     this.paintMatrixTop();
   }
-  
+
 
 
   paintMatrix(): void {
@@ -265,7 +265,7 @@ export class MatrixComponent implements OnInit {
       });
     }
   }
-  
+
 
 
   //Evitar tecla oprimida y mantenida
@@ -284,12 +284,12 @@ export class MatrixComponent implements OnInit {
       if (direction) {
         //controla que si mantienen oprimida la misma flecha no se validará
         if (this.prevDirection !== direction[0] + '' + direction[1]) {
-          if(this.prevDirection !== direction[0] + '' + direction[1]) {
+          if (this.prevDirection !== direction[0] + '' + direction[1]) {
             this.orangeCells.forEach(cell => {
               this.paintCellOk(cell.row, cell.col, this.clr)
             });
             this.orangeCells = [];
-          clearInterval(this.paintInterval);
+            clearInterval(this.paintInterval);
           }
           this.move(direction[0], direction[1]);
           this.prevDirection = direction[0] + '' + direction[1]
@@ -308,42 +308,38 @@ export class MatrixComponent implements OnInit {
   move(rowDelta: number, colDelta: number): void {
     const nRow = this.activeCell.row + rowDelta;
     const nCol = this.activeCell.col + colDelta;
-    
+
     // Actualiza la celda activa con la nueva posición y tiempo
     this.activeCell = { row: nRow, col: nCol, clr: this.clr, tim: this.getTim(), val: '', nam: this.nam };
-  
+
     // Busca si la celda ya fue visitada
     const visitedCellIndex = this.visitedCells.findIndex(cell => cell.row === nRow && cell.col === nCol);
     if (visitedCellIndex !== -1) {
-        // La celda ya fue visitada
-        this.gameover = true;
-        // Borra las celdas del jugador y reinicia las celdas visitadas y pintadas de naranja
-        this.clearPlayerCells();
-    } else {
-        if (this.matrix[nRow][nCol] === this.activeCell.clr && this.visitedCells.length > 0) {
-            // Cerró el bucle, enviar al servidor para calcular el área ganada
-            this.websocketService.sendMessage('calcArea', this.activeCell.clr);
-            this.visitedCells = [];
-        } else {
-            // Si la celda no es del color del jugador, la agrega a las celdas visitadas
-            if (this.matrix[nRow][nCol] !== this.activeCell.clr) {
-                this.visitedCells.push(this.activeCell);
-                // Elimina las celdas pintadas de naranja que ya no están activas
-                this.clearInactiveOrangeCells();
-                // Envía la celda activa al servidor para marcarla en la matriz del servicio
-                this.websocketService.sendMessage('activeCell', this.activeCell);
-            } else {
-                // Agrega alguna lógica aquí si es necesario
-            }
-        }
-        // Pinta la celda en la matriz del jugador y en naranja
-        this.paintCellOk(nRow, nCol, this.activeCell.clr);
-        this.paintCellOk(nRow, nCol, 'orange');
-        this.orangeCells.push(this.activeCell);
+      // La celda ya fue visitada
+      this.gameover = true;
+      // Borra las celdas del jugador y reinicia las celdas visitadas y pintadas de naranja
+      this.clearPlayerCells();
+    } else if (this.matrix[nRow][nCol] === this.activeCell.clr && this.visitedCells.length > 0) {
+      // Cerró el bucle, enviar al servidor para calcular el área ganada
+      this.websocketService.sendMessage('calcArea', this.activeCell.clr);
+      this.visitedCells = [];
+    } else if (this.matrix[nRow][nCol] !== this.activeCell.clr) {
+      // Si la celda no es del color del jugador, la agrega a las celdas visitadas
+      this.visitedCells.push(this.activeCell);
+      // Elimina las celdas pintadas de naranja que ya no están activas
+      this.clearInactiveOrangeCells();
+      // Envía la celda activa al servidor para marcarla en la matriz del servicio
+      this.websocketService.sendMessage('activeCell', this.activeCell);
     }
-}
 
-  
+    // Pinta la celda en la matriz del jugador y en naranja
+    this.paintCellOk(nRow, nCol, this.activeCell.clr);
+    this.paintCellOk(nRow, nCol, 'orange');
+    this.orangeCells.push(this.activeCell);
+  }
+
+
+
   // Método para limpiar las celdas del jugador y restablecer las celdas visitadas y pintadas de naranja
   clearPlayerCells(): void {
     this.websocketService.sendMessage('deleteCells', this.clr);
@@ -353,7 +349,7 @@ export class MatrixComponent implements OnInit {
     });
     this.orangeCells = [];
   }
-  
+
   // Método para limpiar las celdas pintadas de naranja que ya no están activas
   clearInactiveOrangeCells(): void {
     this.orangeCells.forEach(cell => {
@@ -369,7 +365,7 @@ export class MatrixComponent implements OnInit {
       // Calcula el desplazamiento del scroll de acuerdo con la celda actual
       const targetTop = (this.cellSize * this.activeCell.row) - (this.windowHeight / 2) + this.padding * 2;
       const targetLeft = (this.cellSize * this.activeCell.col) - (this.windowWidth / 2) + this.padding * 2;
-  
+
       // Verifica la dirección del desplazamiento y ajusta el scroll en consecuencia
       if (direction === 't') {
         // Desplazamiento hacia arriba o abajo
@@ -387,7 +383,7 @@ export class MatrixComponent implements OnInit {
       }
     }
   }
-  
+
 
 
   //Calcula eltiemo en milisegundos en el que se activa la celda en formato numerioc yyyymmddhh24missfff
