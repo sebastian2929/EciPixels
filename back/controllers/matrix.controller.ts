@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import { MatrixService } from '../services/matrix.service';
+import { Console } from 'console';
 import { Cell } from '../models/cell.interface'
   
 export class MatrixController {
@@ -16,41 +17,33 @@ export class MatrixController {
                 let parsedMessage = JSON.parse(JSON.parse(message));
                 const action = parsedMessage.action;
                 switch (action) {
-                    case 'calcArea': {
+                    case 'calcArea':
                         const findClr = parsedMessage.data;
                         await this.calcArea(ws, findClr);
                         break;
-                    }
-                    case 'activeCell': {
+                    case 'activeCell':
                         const cell = parsedMessage.data;
                         await this.activeCell(ws, cell);
                         break;
-                    }
-                    case 'deleteCells': {
+                    case 'deleteCells':
                         const clr = parsedMessage.data;
                         await this.deleteCells(ws,clr);
                         break;
-                    }
-                    case 'getMatrixIni': {
+                    case 'getMatrixIni':
                         const mNam = parsedMessage.data;
                         await this.getMatrixIni(ws, mNam);
                         break;
-                    }
-                    case 'getMatrix': {
+                    case 'getMatrix':
                         await this.getMatrix(ws);
                         break;
-                    }
-                    case 'restartGame': {
+                    case 'restartGame':
                         await this.restartGame(ws);
                         break;
-                    }
-                    case 'getTop': {
+                    case 'getTop':
                         await this.getTop(ws);
                         break;
-                    }
-                    default: {
+                    default:
                         console.log('Invalid action');
-                    }
                 }
             });
         });

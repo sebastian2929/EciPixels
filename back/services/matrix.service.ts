@@ -1,11 +1,14 @@
 
+import { Console } from 'console';
 import WebSocket from 'ws';
 import { Cell } from '../models/cell.interface'
 
 export class MatrixService {
   private wss: WebSocket.Server;
+  //private bds: BdService;
   constructor(wss: WebSocket.Server) {
     this.wss = wss;
+    //this.bds = new BdService(wss);
     this.createMatrix();
     this.createMatrix();
   }
@@ -13,22 +16,45 @@ export class MatrixService {
   topPlayers: [nam: string, clr: string, numCell: number][] = [];
   matrix: string[][] = [];
   visitedCells: Cell[] = [];
-  rows: number = 320; //320
-  cols: number = 320; //320
+  rows: number = 50; //320
+  cols: number = 50; //320
   backgrounColor = '#383838'
 
-  public async getMatrixIni(mNam: string): Promise<{ matrix: string[][], activeCell: Cell }> {
+  public async getMatrixIni(mNam: string): Promise<{ matrix: String[][], activeCell: Cell }> {
     try {
       let cell: Cell;
       let clr = this.getRandomColor();
       if (clr !== "") {
-        let row = Math.floor(Math.random() * (this.rows - 8)) + 4;
-        let col = Math.floor(Math.random() * (this.cols - 8)) + 4;
-        for (let i = row - 1; i <= row + 1; i++) {
-          for (let j = col - 1; j <= col + 1; j++) {
-            this.matrix[i][j] = clr;
+        let row: number, col: number;
+        let validPlacement = false;
+        
+        // Función para verificar si todas las celdas dentro del radio de 3x3 están en el color de fondo
+        const isValidPlacement = (r: number, c: number) => {
+          for (let i = r - 1; i <= r + 1; i++) {
+            for (let j = c - 1; j <= c + 1; j++) {
+              if (this.matrix[i][j] !== this.backgrounColor) {
+                return false;
+              }
+            }
           }
-        }
+          return true;
+        };
+        
+        // Generar coordenadas aleatorias hasta que se encuentre un área válida
+        do {
+          row = Math.floor(Math.random() * (this.rows - 6)) + 3;
+          col = Math.floor(Math.random() * (this.cols - 6)) + 3;
+          if (isValidPlacement(row, col)) {
+            validPlacement = true;
+            // Colorear el área del jugador
+            for (let i = row - 1; i <= row + 1; i++) {
+              for (let j = col - 1; j <= col + 1; j++) {
+                this.matrix[i][j] = clr;
+              }
+            }
+          }
+        } while (!validPlacement);
+        
         cell = { row, col, clr, tim: 0, val: "", nam: mNam }
       } else {
         cell = { row: 0, col: 0, clr, tim: 0, val: "", nam: mNam }
@@ -41,8 +67,11 @@ export class MatrixService {
       throw error;
     }
   }
+  
+  
+  
 
-  public async getMatrix(): Promise<string[][]> {
+  public async getMatrix(): Promise<String[][]> {
     try {
       return this.matrix;
     }
@@ -71,84 +100,47 @@ export class MatrixService {
 
   public async activeCell(mCell: Cell): Promise<Cell> {
     try {
-        if (!mCell) {
-            return this.handleGameOver(mCell);
-        }
-
-        const count: number = this.getCountOfCells(mCell.clr);
-
+      if (mCell) {
+        let count: number = this.matrix.flat().filter(cell => cell === mCell.clr).length;
         if (count > 0) {
-            const visitedCell = this.getVisitedCell(mCell);
-            if (visitedCell) {
-                this.updateVisitedCell(visitedCell, mCell);
+          const visitedCell = this.visitedCells.find(cell => cell.row === mCell.row && cell.col === mCell.col);
+          if (visitedCell) {
+            if (visitedCell.tim < mCell.tim) {
+              this.deleteCells(visitedCell.clr);
+              this.visitedCells = this.visitedCells.filter(cell => cell.clr !== visitedCell.clr);
+              this.matrix[mCell.row][mCell.col] = mCell.clr;
             } else {
-                this.handleNewCellWithinBounds(mCell);
+              this.deleteCells(mCell.clr);
+              this.visitedCells = this.visitedCells.filter(cell => cell.clr !== mCell.clr);
+              this.matrix[visitedCell.row][visitedCell.col] = visitedCell.clr;
             }
+          }
+          else {
+            /// Valida fronteras límites
+            if (mCell.row < 1 || mCell.row > this.rows - 2 || mCell.col < 1 || mCell.col > this.cols - 2) {
+              mCell.val = 'gameover';
+            } else {
+              this.matrix[mCell.row][mCell.col] = mCell.clr;
+              if (mCell.val != 'ini') {
+                this.visitedCells.push(mCell);
+              }
+              mCell.val = 'ok';
+            }
+          }
+          if (mCell.val === 'gameover'){
+            this.topPlayers = this.topPlayers.filter(player => player[0] !== mCell.nam);
+          }
+
         } else {
-            return this.handleGameOver(mCell);
+          mCell.val = 'gameover';
         }
-
-        return mCell;
+      }
+      return mCell;
     } catch (error) {
-        console.error('Error updating cell:', error);
-        throw error;
+      console.error('Error updating cell:', error);
+      throw error;
     }
-}
-
-private getCountOfCells(color: string): number {
-    return this.matrix.flat().filter(cell => cell === color).length;
-}
-
-private getVisitedCell(cell: Cell): Cell | undefined {
-    return this.visitedCells.find(c => c.row === cell.row && c.col === cell.col);
-}
-
-private updateVisitedCell(visitedCell: Cell, newCell: Cell): void {
-    if (visitedCell.tim < newCell.tim) {
-        this.updateCells(visitedCell, newCell);
-    } else {
-        this.updateCells(newCell, visitedCell);
-    }
-}
-
-private handleNewCellWithinBounds(cell: Cell): void {
-    if (this.isWithinBounds(cell)) {
-        this.updateMatrixAndVisitedCells(cell);
-        cell.val = 'ok';
-    } else {
-        this.handleGameOver(cell);
-    }
-}
-
-private handleGameOver(cell: Cell): Cell {
-    cell.val = 'gameover';
-    if (cell.val === 'gameover') {
-        this.removePlayerFromTopPlayers(cell.nam);
-    }
-    return cell;
-}
-
-private isWithinBounds(cell: Cell): boolean {
-    return cell.row >= 1 && cell.row <= this.rows - 2 && cell.col >= 1 && cell.col <= this.cols - 2;
-}
-
-private updateMatrixAndVisitedCells(cell: Cell): void {
-    this.matrix[cell.row][cell.col] = cell.clr;
-    if (cell.val !== 'ini') {
-        this.visitedCells.push(cell);
-    }
-}
-
-private removePlayerFromTopPlayers(playerName: string): void {
-    this.topPlayers = this.topPlayers.filter(player => player[0] !== playerName);
-}
-
-private updateCells(cellToKeep: Cell, cellToDelete: Cell): void {
-    this.deleteCells(cellToKeep.clr);
-    this.visitedCells = this.visitedCells.filter(cell => cell.clr !== cellToKeep.clr);
-    this.matrix[cellToDelete.row][cellToDelete.col] = cellToDelete.clr;
-}
-
+  }
 
   public async calcArea(findClr: string): Promise<Cell[]> {
     try {
@@ -215,6 +207,7 @@ private updateCells(cellToKeep: Cell, cellToDelete: Cell): void {
         }
       }
       this.visitedCells = this.visitedCells.filter(cell => cell.clr !== findClr);
+      //return this.matrix;
       return mCell;
     } catch (error: any) {
       console.error('Error calculating area:', error);
@@ -223,6 +216,7 @@ private updateCells(cellToKeep: Cell, cellToDelete: Cell): void {
   }
 
   public async deleteCells(clr: string): Promise<{ matrix: string[][], clr: string }> {
+    //await this.bds.updateGamersStateByColor(clr, 'I');
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
         if (this.matrix[i][j] === clr) {
@@ -244,7 +238,7 @@ private updateCells(cellToKeep: Cell, cellToDelete: Cell): void {
     return '#' + hexColor;
   }
 
-  public async restartGame(): Promise<string[][]> {
+  public async restartGame(): Promise<String[][]> {
     try {
       for (let i = 0; i < this.rows; i++) {
         for (let j = 0; j < this.cols; j++) {

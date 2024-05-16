@@ -10,12 +10,12 @@
   </div>
 </div>
 
-<div class="scroll-container" #scrollContainer 
+<div class="scroll-container" #scrollContainer tabindex="0" 
   [style.height.px]="windowHeight -40"
   [style.width.px]="windowWidth -20" 
   [style.padding.px]="padding" >
-  <div class="scroll-content">
-    <canvas #canvas tabindex="0">
+  <div class="scroll-content"  >
+    <canvas #canvas tabindex="0" >
     </canvas>
   </div>
 </div>
