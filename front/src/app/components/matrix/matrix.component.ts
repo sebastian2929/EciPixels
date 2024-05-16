@@ -339,7 +339,7 @@ export class MatrixComponent implements OnInit {
       this.paintCellOk(nRow, nCol, 'orange');
       this.orangeCells.push(this.activeCell);
     }
-  }
+  }  
   
   // Método para limpiar las celdas del jugador y restablecer las celdas visitadas y pintadas de naranja
   clearPlayerCells(): void {
@@ -360,9 +360,6 @@ export class MatrixComponent implements OnInit {
     });
     this.orangeCells = [];
   }
-  
-  
-
 
   moveScroll(direction: string) {
     if (this.scrollContainer !== null) {
@@ -374,18 +371,16 @@ export class MatrixComponent implements OnInit {
       if (direction === 't') {
         // Desplazamiento hacia arriba o abajo
         this.scrollContainer.nativeElement.scrollTop = targetTop;
-      } else {
+      } else if (direction === 'l') {
         // Desplazamiento hacia la derecha o la izquierda
-        if (direction === 'l') {
-          this.scrollContainer.nativeElement.scrollLeft = targetLeft;
-        } else {
-          // Desplazamiento en ambas direcciones con transición suave
-          this.scrollContainer.nativeElement.scrollTo({
-            top: targetTop,
-            left: targetLeft,
-            behavior: 'smooth'
-          });
-        }
+        this.scrollContainer.nativeElement.scrollLeft = targetLeft;
+      } else {
+        // Desplazamiento en ambas direcciones con transición suave
+        this.scrollContainer.nativeElement.scrollTo({
+          top: targetTop,
+          left: targetLeft,
+          behavior: 'smooth'
+        });
       }
     }
   }

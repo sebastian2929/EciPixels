@@ -4,10 +4,8 @@ import { Cell } from '../models/cell.interface'
 
 export class MatrixService {
   private wss: WebSocket.Server;
-  //private bds: BdService;
   constructor(wss: WebSocket.Server) {
     this.wss = wss;
-    //this.bds = new BdService(wss);
     this.createMatrix();
     this.createMatrix();
   }

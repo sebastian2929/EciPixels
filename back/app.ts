@@ -35,7 +35,7 @@ if (cluster.isMaster) {
 
 
     const matrixController = new MatrixController(wss);
-    // SonarCloud-ignore
+
     const websocketController = new WebsocketController(wss, matrixController);
 
     server.listen(port, () => {
