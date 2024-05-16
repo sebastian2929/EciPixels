@@ -1,5 +1,4 @@
 
-import { Console } from 'console';
 import WebSocket from 'ws';
 import { Cell } from '../models/cell.interface'
 
@@ -20,58 +19,67 @@ export class MatrixService {
   cols: number = 50; //320
   backgrounColor = '#383838'
 
-  public async getMatrixIni(mNam: string): Promise<{ matrix: String[][], activeCell: Cell }> {
+  public async getMatrixIni(mNam: string): Promise<{ matrix: string[][], activeCell: Cell }> {
     try {
       let cell: Cell;
       let clr = this.getRandomColor();
+
       if (clr !== "") {
-        let row: number, col: number;
-        let validPlacement = false;
-        
-        // Función para verificar si todas las celdas dentro del radio de 3x3 están en el color de fondo
-        const isValidPlacement = (r: number, c: number) => {
-          for (let i = r - 1; i <= r + 1; i++) {
-            for (let j = c - 1; j <= c + 1; j++) {
-              if (this.matrix[i][j] !== this.backgrounColor) {
-                return false;
-              }
-            }
-          }
-          return true;
-        };
-        
-        // Generar coordenadas aleatorias hasta que se encuentre un área válida
-        do {
-          row = Math.floor(Math.random() * (this.rows - 6)) + 3;
-          col = Math.floor(Math.random() * (this.cols - 6)) + 3;
-          if (isValidPlacement(row, col)) {
-            validPlacement = true;
-            // Colorear el área del jugador
-            for (let i = row - 1; i <= row + 1; i++) {
-              for (let j = col - 1; j <= col + 1; j++) {
-                this.matrix[i][j] = clr;
-              }
-            }
-          }
-        } while (!validPlacement);
-        
-        cell = { row, col, clr, tim: 0, val: "", nam: mNam }
+        cell = await this.generateValidCell(mNam, clr);
       } else {
-        cell = { row: 0, col: 0, clr, tim: 0, val: "", nam: mNam }
+        cell = { row: 0, col: 0, clr, tim: 0, val: "", nam: mNam };
       }
+
       this.topPlayers.push([mNam, clr, 0]);
+
       return { matrix: this.matrix, activeCell: cell };
-    }
-    catch (error) {
+    } catch (error) {
       console.error('Error creating matrix:', error);
       throw error;
     }
   }
-  
-  
-  
 
-  public async getMatrix(): Promise<String[][]> {
+  private async generateValidCell(mNam: string, clr: string): Promise<Cell> {
+    let row: number, col: number;
+    let validPlacement = false;
+
+    do {
+      [row, col] = await this.generateRandomCoordinates();
+      if (this.isValidPlacement(row, col)) {
+        validPlacement = true;
+        this.colorPlayerArea(row, col, clr);
+      }
+    } while (!validPlacement);
+
+    return { row, col, clr, tim: 0, val: "", nam: mNam };
+  }
+
+  private async generateRandomCoordinates(): Promise<[number, number]> {
+    const row = Math.floor(Math.random() * (this.rows - 6)) + 3;
+    const col = Math.floor(Math.random() * (this.cols - 6)) + 3;
+    return [row, col];
+  }
+
+  private isValidPlacement(row: number, col: number): boolean {
+    for (let i = row - 1; i <= row + 1; i++) {
+      for (let j = col - 1; j <= col + 1; j++) {
+        if (this.matrix[i][j] !== this.backgrounColor) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private colorPlayerArea(row: number, col: number, clr: string): void {
+    for (let i = row - 1; i <= row + 1; i++) {
+      for (let j = col - 1; j <= col + 1; j++) {
+        this.matrix[i][j] = clr;
+      }
+    }
+  }
+
+  public async getMatrix(): Promise<string[][]> {
     try {
       return this.matrix;
     }
@@ -100,123 +108,173 @@ export class MatrixService {
 
   public async activeCell(mCell: Cell): Promise<Cell> {
     try {
-      if (mCell) {
-        let count: number = this.matrix.flat().filter(cell => cell === mCell.clr).length;
-        if (count > 0) {
-          const visitedCell = this.visitedCells.find(cell => cell.row === mCell.row && cell.col === mCell.col);
-          if (visitedCell) {
-            if (visitedCell.tim < mCell.tim) {
-              this.deleteCells(visitedCell.clr);
-              this.visitedCells = this.visitedCells.filter(cell => cell.clr !== visitedCell.clr);
-              this.matrix[mCell.row][mCell.col] = mCell.clr;
-            } else {
-              this.deleteCells(mCell.clr);
-              this.visitedCells = this.visitedCells.filter(cell => cell.clr !== mCell.clr);
-              this.matrix[visitedCell.row][visitedCell.col] = visitedCell.clr;
-            }
-          }
-          else {
-            /// Valida fronteras límites
-            if (mCell.row < 1 || mCell.row > this.rows - 2 || mCell.col < 1 || mCell.col > this.cols - 2) {
-              mCell.val = 'gameover';
-            } else {
-              this.matrix[mCell.row][mCell.col] = mCell.clr;
-              if (mCell.val != 'ini') {
-                this.visitedCells.push(mCell);
-              }
-              mCell.val = 'ok';
-            }
-          }
-          if (mCell.val === 'gameover'){
-            this.topPlayers = this.topPlayers.filter(player => player[0] !== mCell.nam);
-          }
-
-        } else {
-          mCell.val = 'gameover';
+        if (!mCell) {
+            return this.handleMissingCell();
         }
-      }
-      return mCell;
+
+        const count = this.countCellsWithColor(mCell.clr);
+
+        if (count === 0) {
+            return this.handleNoCellsFound(mCell);
+        }
+
+        const visitedCell = this.findVisitedCell(mCell);
+
+        if (visitedCell) {
+            return this.handleVisitedCell(visitedCell, mCell);
+        }
+
+        return this.handleNewCell(mCell);
     } catch (error) {
-      console.error('Error updating cell:', error);
-      throw error;
+        console.error('Error updating cell:', error);
+        throw error;
     }
-  }
+}
 
-  public async calcArea(findClr: string): Promise<Cell[]> {
-    try {
-      let mCell: Cell[] = [];
-      // Calculate mins and maxs
-      let minRow = Number.MAX_SAFE_INTEGER;
-      let minCol = Number.MAX_SAFE_INTEGER;
-      let maxRow = 0;
-      let maxCol = 0;
-      //calcula min's y max's row y col
-      for (let i = 0; i < this.matrix.length; i++) {
-        for (let j = 0; j < this.matrix[i].length; j++) {
-          if (this.matrix[i][j] === findClr) {
-            minRow = Math.min(minRow, i);
-            minCol = Math.min(minCol, j);
-            maxRow = Math.max(maxRow, i);
-            maxCol = Math.max(maxCol, j);
-          }
+private handleMissingCell(): Cell {
+    const cell: Cell = {
+        row: 0,
+        col: 0,
+        clr: '',
+        tim: 0,
+        val: 'gameover',
+        nam: ''
+    };
+    return cell;
+}
+
+private countCellsWithColor(color: string): number {
+    return this.matrix.flat().filter(cell => cell === color).length;
+}
+
+private handleNoCellsFound(mCell: Cell): Cell {
+    mCell.val = 'gameover';
+    return mCell;
+}
+
+private findVisitedCell(mCell: Cell): Cell | undefined {
+    return this.visitedCells.find(cell => cell.row === mCell.row && cell.col === mCell.col);
+}
+
+private handleVisitedCell(visitedCell: Cell, mCell: Cell): Cell {
+    if (visitedCell.tim < mCell.tim) {
+        this.deleteCells(visitedCell.clr);
+        this.visitedCells = this.visitedCells.filter(cell => cell.clr !== visitedCell.clr);
+        this.matrix[mCell.row][mCell.col] = mCell.clr;
+    } else {
+        this.deleteCells(mCell.clr);
+        this.visitedCells = this.visitedCells.filter(cell => cell.clr !== mCell.clr);
+        this.matrix[visitedCell.row][visitedCell.col] = visitedCell.clr;
+    }
+    return mCell;
+}
+
+private handleNewCell(mCell: Cell): Cell {
+    if (
+        mCell.row < 1 ||
+        mCell.row > this.rows - 2 ||
+        mCell.col < 1 ||
+        mCell.col > this.cols - 2
+    ) {
+        mCell.val = 'gameover';
+    } else {
+        this.matrix[mCell.row][mCell.col] = mCell.clr;
+        if (mCell.val !== 'ini') {
+            this.visitedCells.push(mCell);
         }
-      }
-      // Iterate over the area
+        mCell.val = 'ok';
+    }
+
+    if (mCell.val === 'gameover') {
+        this.topPlayers = this.topPlayers.filter(player => player[0] !== mCell.nam);
+    }
+
+    return mCell;
+}
+
+
+public async calcArea(findClr: string): Promise<Cell[]> {
+  try {
+      const mCell: Cell[] = [];
+      const { minRow, minCol, maxRow, maxCol } = this.calculateMinMaxRowsAndCols(findClr);
+
       for (let r = minRow; r <= maxRow; r++) {
-        for (let c = minCol; c <= maxCol; c++) {
-          //Se analizan solo as celdas del color diferente al buscado
-          if (this.matrix[r][c] !== findClr) {
-            //Cuenta el número de límites del findClr de la celda evaluada
-            let paso: number = 0;
-            // Right
-            for (let c1 = c + 1; c1 <= maxCol; c1++) {
-              if (this.matrix[r][c1] === findClr) {
-                //Encontró un límite por derecha
-                paso++;
-                break;
+          for (let c = minCol; c <= maxCol; c++) {
+              if (this.matrix[r][c] !== findClr) {
+                  const foundLimits = this.findLimits(findClr, r, c, minCol, maxCol, minRow, maxRow);
+
+                  if (foundLimits === 4) {
+                      this.matrix[r][c] = findClr;
+                      mCell.push({ row: r, col: c, val: '', nam: '', clr: findClr, tim: -99 });
+                  }
               }
-            }
-            // Left
-            for (let c1 = c - 1; c1 >= minCol; c1--) {
-              if (this.matrix[r][c1] === findClr) {
-                paso++;
-                break;
-              }
-            }
-            // Down
-            for (let r1 = r + 1; r1 <= maxRow; r1++) {
-              if (this.matrix[r1][c] === findClr) {
-                paso++;
-                break;
-              }
-            }
-            // Up
-            for (let r1 = r - 1; r1 >= minRow; r1--) {
-              if (this.matrix[r1][c] === findClr) {
-                paso++;
-                break;
-              }
-            }
-            //Si se encuntran los 4 límites se pinda del color
-            if (paso === 4) {
-              this.matrix[r][c] = findClr;
-              mCell.push({ row: r, col: c, val: '', nam: '', clr: findClr, tim: -99 });
-              paso = 0;
-            }
           }
-        }
       }
+
       this.visitedCells = this.visitedCells.filter(cell => cell.clr !== findClr);
-      //return this.matrix;
       return mCell;
-    } catch (error: any) {
+  } catch (error: any) {
       console.error('Error calculating area:', error);
       throw error;
-    }
+  }
+}
+
+private calculateMinMaxRowsAndCols(findClr: string): { minRow: number, minCol: number, maxRow: number, maxCol: number } {
+  let minRow = Number.MAX_SAFE_INTEGER;
+  let minCol = Number.MAX_SAFE_INTEGER;
+  let maxRow = 0;
+  let maxCol = 0;
+
+  for (let i = 0; i < this.matrix.length; i++) {
+      for (let j = 0; j < this.matrix[i].length; j++) {
+          if (this.matrix[i][j] === findClr) {
+              minRow = Math.min(minRow, i);
+              minCol = Math.min(minCol, j);
+              maxRow = Math.max(maxRow, i);
+              maxCol = Math.max(maxCol, j);
+          }
+      }
   }
 
+  return { minRow, minCol, maxRow, maxCol };
+}
+
+private findLimits(findClr: string, r: number, c: number, minCol: number, maxCol: number, minRow: number, maxRow: number): number {
+  let foundLimits = 0;
+
+  for (let c1 = c + 1; c1 <= maxCol; c1++) {
+      if (this.matrix[r][c1] === findClr) {
+          foundLimits++;
+          break;
+      }
+  }
+
+  for (let c1 = c - 1; c1 >= minCol; c1--) {
+      if (this.matrix[r][c1] === findClr) {
+          foundLimits++;
+          break;
+      }
+  }
+
+  for (let r1 = r + 1; r1 <= maxRow; r1++) {
+      if (this.matrix[r1][c] === findClr) {
+          foundLimits++;
+          break;
+      }
+  }
+
+  for (let r1 = r - 1; r1 >= minRow; r1--) {
+      if (this.matrix[r1][c] === findClr) {
+          foundLimits++;
+          break;
+      }
+  }
+
+  return foundLimits;
+}
+
+
   public async deleteCells(clr: string): Promise<{ matrix: string[][], clr: string }> {
-    //await this.bds.updateGamersStateByColor(clr, 'I');
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
         if (this.matrix[i][j] === clr) {
@@ -238,7 +296,7 @@ export class MatrixService {
     return '#' + hexColor;
   }
 
-  public async restartGame(): Promise<String[][]> {
+  public async restartGame(): Promise<string[][]> {
     try {
       for (let i = 0; i < this.rows; i++) {
         for (let j = 0; j < this.cols; j++) {

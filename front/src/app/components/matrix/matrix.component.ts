@@ -1,5 +1,4 @@
-import { Component, OnInit, TemplateRef } from '@angular/core';
-import { ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { WebsocketService } from '../../services/websocket.service';
 import { Cell } from '../../models/cell.interface'
 
@@ -81,86 +80,117 @@ export class MatrixComponent implements OnInit {
   }
 
   private handleIncomingMessage(message: any): void {
-    if (message.action === 'getMatrixIni') {
-      if (message.data) {
-        this.matrix = (message.data.matrix);
-        this.rows = this.matrix.length;
-        this.cols = this.matrix.length > 0 ? this.matrix[0].length : 0;
-        this.cellSize = (this.windowWidth - this.padding * 2) / (this.rows + 1);
-        this.canvas.nativeElement.width = this.rows * this.cellSize;
-        this.canvas.nativeElement.height = this.cols * this.cellSize;
-        this.canvasMin.nativeElement.width = (this.canvas.nativeElement.width * 11) / 100
-        this.canvasMin.nativeElement.height = (this.canvas.nativeElement.height * 16) / 100
-        this.canvasTop.nativeElement.width = (this.canvas.nativeElement.width * 15) / 100
-        this.canvasTop.nativeElement.height = (this.canvas.nativeElement.height * 20) / 100
-        this.activeCell = (message.data.activeCell);
-        this.visitedCells = [];
-        this.clr = (message.data.activeCell.clr);
-        this.prevDirection = "";
-        this.gameover = false;
-        for (let i = this.activeCell.row - 1; i <= this.activeCell.row + 1; i++) {
-          for (let j = this.activeCell.col - 1; j <= this.activeCell.col + 1; j++) {
-            const cell = { row: i, col: j, clr: this.clr, tim: this.getTim(), val: 'ini', nam: this.nam };
-            this.websocketService.sendMessage('activeCell', cell);
-          }
-        }
-        this.paintMatrix();
-        this.moveScroll('b');
-        this.websocketService.sendMessage('getTop', {});
-      }
-      else {
-        console.log('Mensaje del componente, el message.data no regresó la matrix');
-      }
-    }
-    if (message.action === 'activeCell') {
-      const cell = message.data;
-      if (cell) {
-        if (cell.val === 'ok') {
-          this.matrix[cell.row][cell.col] = cell.clr
-          this.paintCell(cell.row, cell.col);
-          this.paintCellOk(cell.row, cell.col, cell.clr);
-        }
-        if (cell.val === 'gameover') {
-          this.websocketService.sendMessage('deleteCells', cell.clr);
-        }
-      }
-    }
-    if (message.action === 'deleteCells') {
-      this.matrix = message.data.matrix
-      this.paintMatrix();
-      const clr = message.data.clr
-      if (this.clr === clr) {
-        this.gameover = true;
-        clearInterval(this.paintInterval);
-        this.openPopup();
-      }
-    }
-    if (message.action === 'getMatrix') {
-      this.matrix = (message.data);
-      this.paintMatrix();
-    }
-    if (message.action === 'restartGame') {
-      this.matrix = message.data;
-      this.paintMatrix();
-    }
-    if (message.action === 'calcArea') {
-      //this.matrix = message.data;
-      //this.paintMatrix();
-      const mCell: Cell[] = message.data;
-      mCell.forEach((cell) => {
-        ////this.websocketService.sendMessage('activeCell', cell);    
-        this.matrix[cell.row][cell.col] = cell.clr;
-        cell.nam = this.nam;
-        this.paintCellOk(cell.row, cell.col, cell.clr);
-      });
-      this.websocketService.sendMessage('getTop', {});
-      this.paintMatrixMin();
-    }
-    if (message.action === 'getTop') {
-      this.topPlayers = message.data;
-      this.paintMatrixTop();
+    switch (message.action) {
+      case 'getMatrixIni':
+        this.handleGetMatrixIni(message);
+        break;
+      case 'activeCell':
+        this.handleActiveCell(message);
+        break;
+      case 'deleteCells':
+        this.handleDeleteCells(message);
+        break;
+      case 'getMatrix':
+      case 'restartGame':
+        this.handleMatrixUpdate(message.data);
+        break;
+      case 'calcArea':
+        this.handleCalcArea(message.data);
+        break;
+      case 'getTop':
+        this.handleGetTop(message.data);
+        break;
+      default:
+        console.log('Unhandled message action:', message.action);
     }
   }
+  
+  private handleGetMatrixIni(message: any): void {
+    if (message.data) {
+      this.initializeMatrix(message.data);
+      this.paintMatrix();
+      this.moveScroll('b');
+      this.websocketService.sendMessage('getTop', {});
+    } else {
+      console.log('Mensaje del componente, el message.data no regresó la matrix');
+    }
+  }
+  
+  private initializeMatrix(data: any): void {
+    this.matrix = data.matrix;
+    this.rows = this.matrix.length;
+    this.cols = this.rows > 0 ? this.matrix[0].length : 0;
+    this.cellSize = (this.windowWidth - this.padding * 2) / (this.rows + 1);
+    this.canvas.nativeElement.width = this.rows * this.cellSize;
+    this.canvas.nativeElement.height = this.cols * this.cellSize;
+    this.canvasMin.nativeElement.width = (this.canvas.nativeElement.width * 11) / 100;
+    this.canvasMin.nativeElement.height = (this.canvas.nativeElement.height * 16) / 100;
+    this.canvasTop.nativeElement.width = (this.canvas.nativeElement.width * 15) / 100;
+    this.canvasTop.nativeElement.height = (this.canvas.nativeElement.height * 20) / 100;
+    this.activeCell = data.activeCell;
+    this.visitedCells = [];
+    this.clr = data.activeCell.clr;
+    this.prevDirection = "";
+    this.gameover = false;
+  
+    for (let i = this.activeCell.row - 1; i <= this.activeCell.row + 1; i++) {
+      for (let j = this.activeCell.col - 1; j <= this.activeCell.col + 1; j++) {
+        const cell = { row: i, col: j, clr: this.clr, tim: this.getTim(), val: 'ini', nam: this.nam };
+        this.websocketService.sendMessage('activeCell', cell);
+      }
+    }
+  }
+  
+  private handleActiveCell(message: any): void {
+    const cell = message.data;
+    if (cell) {
+      if (cell.val === 'ok') {
+        this.handleCellOk(cell);
+      }
+      if (cell.val === 'gameover') {
+        this.websocketService.sendMessage('deleteCells', cell.clr);
+      }
+    }
+  }
+  
+  private handleCellOk(cell: any): void {
+    this.matrix[cell.row][cell.col] = cell.clr;
+    this.paintCell(cell.row, cell.col);
+    this.paintCellOk(cell.row, cell.col, cell.clr);
+  }
+  
+  private handleDeleteCells(message: any): void {
+    this.matrix = message.data.matrix;
+    this.paintMatrix();
+    const clr = message.data.clr;
+    if (this.clr === clr) {
+      this.gameover = true;
+      clearInterval(this.paintInterval);
+      this.openPopup();
+    }
+  }
+  
+  private handleMatrixUpdate(data: any): void {
+    this.matrix = data;
+    this.paintMatrix();
+  }
+  
+  private handleCalcArea(data: any): void {
+    const mCell: Cell[] = data;
+    mCell.forEach((cell) => {
+      this.matrix[cell.row][cell.col] = cell.clr;
+      cell.nam = this.nam;
+      this.paintCellOk(cell.row, cell.col, cell.clr);
+    });
+    this.websocketService.sendMessage('getTop', {});
+    this.paintMatrixMin();
+  }
+  
+  private handleGetTop(data: any): void {
+    this.topPlayers = data;
+    this.paintMatrixTop();
+  }
+  
 
 
   paintMatrix(): void {
@@ -218,10 +248,12 @@ export class MatrixComponent implements OnInit {
 
 
   paintMatrixTop(): void {
-    if (this.topPlayers && this.canvasContextTop) { // Comprueba si topPlayers y canvasContextTop existen
+    // Verificar si topPlayers y canvasContextTop existen y son válidos
+    if (this.topPlayers && this.canvasContextTop) {
       // Limpiar el lienzo
       this.canvasContextTop.clearRect(0, 0, this.canvasContextTop.canvas.width, this.canvasContextTop.canvas.height);
-      this.canvasContextTop!.fillStyle = 'white';
+      // Establecer el color de fondo blanco
+      this.canvasContextTop.fillStyle = 'white';
       // Agregar el texto "Leaderboard" en la parte superior
       this.canvasContextTop.font = 'normal 16px Arial'; // Establecer la fuente y el tamaño del texto
       this.canvasContextTop.fillText('Leaderboard', 10, 30);
@@ -233,6 +265,7 @@ export class MatrixComponent implements OnInit {
       });
     }
   }
+  
 
 
   //Evitar tecla oprimida y mantenida
@@ -275,77 +308,88 @@ export class MatrixComponent implements OnInit {
   move(rowDelta: number, colDelta: number): void {
     const nRow = this.activeCell.row + rowDelta;
     const nCol = this.activeCell.col + colDelta;
-    // actualiza la celda 
-    //PILAS el this.getTim obtiene el tiempo en el que la celda fue activa yyyymmddhhh24missfff hasta milisegundos
-    // ese tiempo en el back sirve para identificar el tiempo de colisión 
+    
+    // Actualiza la celda activa con la nueva posición y tiempo
     this.activeCell = { row: nRow, col: nCol, clr: this.clr, tim: this.getTim(), val: '', nam: this.nam };
-    // busca si la celda ya fue visitada 
-    const visitedCell = this.visitedCells.slice(1, this.visitedCells.length - 1).find(cell => cell.row === nRow && cell.col === nCol);
-    if (visitedCell) {
-      // ya fue visitada
+  
+    // Busca si la celda ya fue visitada
+    const visitedCellIndex = this.visitedCells.findIndex(cell => cell.row === nRow && cell.col === nCol);
+    if (visitedCellIndex !== -1) {
+      // La celda ya fue visitada
       this.gameover = true;
-      // borra las celdas del jugador "gameover"
-      this.websocketService.sendMessage('deleteCells', this.clr);
-      // deja en blanco las celdas
-      this.visitedCells = [];
-      // Restablece las celdas pintadas de naranja
-      this.orangeCells.forEach(cell => {
-        this.paintCellOk(cell.row, cell.col, this.clr);
-      });
-      this.orangeCells = [];
+      // Borra las celdas del jugador y reinicia las celdas visitadas y pintadas de naranja
+      this.clearPlayerCells();
     } else {
       if (this.matrix[nRow][nCol] === this.activeCell.clr && this.visitedCells.length > 0) {
-        // Cerró el bucle
-        // enviar la back para calcular el área ganada
+        // Cerró el bucle, enviar al servidor para calcular el área ganada
         this.websocketService.sendMessage('calcArea', this.activeCell.clr);
         this.visitedCells = [];
       } else {
-        // si ninguna de las anteriores se adiciona a las celdas visitadas
+        // Si la celda no es del color del jugador, la agrega a las celdas visitadas
         if (this.matrix[nRow][nCol] !== this.activeCell.clr) {
           this.visitedCells.push(this.activeCell);
-          // Eliminar las celdas pintadas de naranja que ya no están activas
-          this.orangeCells.forEach(cell => {
-            if (!this.visitedCells.some(vc => vc.row === cell.row && vc.col === cell.col)) {
-              this.paintCellOk(cell.row, cell.col, this.clr);
-            }
-          });
-          this.orangeCells = [];
-          // enviar la celda activa para que se marque en la matriz del servicio
+          // Elimina las celdas pintadas de naranja que ya no están activas
+          this.clearInactiveOrangeCells();
+          // Envía la celda activa al servidor para marcarla en la matriz del servicio
           this.websocketService.sendMessage('activeCell', this.activeCell);
         }
       }
-      // pinta la celda en la matriz del jugador
+      // Pinta la celda en la matriz del jugador y en naranja
       this.paintCellOk(nRow, nCol, this.activeCell.clr);
       this.paintCellOk(nRow, nCol, 'orange');
       this.orangeCells.push(this.activeCell);
     }
   }
   
+  // Método para limpiar las celdas del jugador y restablecer las celdas visitadas y pintadas de naranja
+  clearPlayerCells(): void {
+    this.websocketService.sendMessage('deleteCells', this.clr);
+    this.visitedCells = [];
+    this.orangeCells.forEach(cell => {
+      this.paintCellOk(cell.row, cell.col, this.clr);
+    });
+    this.orangeCells = [];
+  }
+  
+  // Método para limpiar las celdas pintadas de naranja que ya no están activas
+  clearInactiveOrangeCells(): void {
+    this.orangeCells.forEach(cell => {
+      if (!this.visitedCells.some(vc => vc.row === cell.row && vc.col === cell.col)) {
+        this.paintCellOk(cell.row, cell.col, this.clr);
+      }
+    });
+    this.orangeCells = [];
+  }
+  
+  
 
 
   moveScroll(direction: string) {
     if (this.scrollContainer !== null) {
-      // calcula el desplazamiento del scroll de acuerd ocon le celdaActual
+      // Calcula el desplazamiento del scroll de acuerdo con la celda actual
       const targetTop = (this.cellSize * this.activeCell.row) - (this.windowHeight / 2) + this.padding * 2;
       const targetLeft = (this.cellSize * this.activeCell.col) - (this.windowWidth / 2) + this.padding * 2;
+  
+      // Verifica la dirección del desplazamiento y ajusta el scroll en consecuencia
       if (direction === 't') {
-        //arriab ao abajo
+        // Desplazamiento hacia arriba o abajo
         this.scrollContainer.nativeElement.scrollTop = targetTop;
       } else {
-        //Derecha o izquierda
+        // Desplazamiento hacia la derecha o la izquierda
         if (direction === 'l') {
-          this.scrollContainer.nativeElement.scrolLeft = targetLeft;
+          this.scrollContainer.nativeElement.scrollLeft = targetLeft;
         } else {
-          // en ambossentidos
+          // Desplazamiento en ambas direcciones con transición suave
           this.scrollContainer.nativeElement.scrollTo({
             top: targetTop,
             left: targetLeft,
-            behavior: 'smooth' // Establece la transición suave
+            behavior: 'smooth'
           });
         }
       }
     }
   }
+  
 
 
   //Calcula eltiemo en milisegundos en el que se activa la celda en formato numerioc yyyymmddhh24missfff
