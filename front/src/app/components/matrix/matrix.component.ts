@@ -315,31 +315,34 @@ export class MatrixComponent implements OnInit {
     // Busca si la celda ya fue visitada
     const visitedCellIndex = this.visitedCells.findIndex(cell => cell.row === nRow && cell.col === nCol);
     if (visitedCellIndex !== -1) {
-      // La celda ya fue visitada
-      this.gameover = true;
-      // Borra las celdas del jugador y reinicia las celdas visitadas y pintadas de naranja
-      this.clearPlayerCells();
+        // La celda ya fue visitada
+        this.gameover = true;
+        // Borra las celdas del jugador y reinicia las celdas visitadas y pintadas de naranja
+        this.clearPlayerCells();
     } else {
-      if (this.matrix[nRow][nCol] === this.activeCell.clr && this.visitedCells.length > 0) {
-        // Cerró el bucle, enviar al servidor para calcular el área ganada
-        this.websocketService.sendMessage('calcArea', this.activeCell.clr);
-        this.visitedCells = [];
-      } else {
-        // Si la celda no es del color del jugador, la agrega a las celdas visitadas
-        if (this.matrix[nRow][nCol] !== this.activeCell.clr) {
-          this.visitedCells.push(this.activeCell);
-          // Elimina las celdas pintadas de naranja que ya no están activas
-          this.clearInactiveOrangeCells();
-          // Envía la celda activa al servidor para marcarla en la matriz del servicio
-          this.websocketService.sendMessage('activeCell', this.activeCell);
+        if (this.matrix[nRow][nCol] === this.activeCell.clr && this.visitedCells.length > 0) {
+            // Cerró el bucle, enviar al servidor para calcular el área ganada
+            this.websocketService.sendMessage('calcArea', this.activeCell.clr);
+            this.visitedCells = [];
+        } else {
+            // Si la celda no es del color del jugador, la agrega a las celdas visitadas
+            if (this.matrix[nRow][nCol] !== this.activeCell.clr) {
+                this.visitedCells.push(this.activeCell);
+                // Elimina las celdas pintadas de naranja que ya no están activas
+                this.clearInactiveOrangeCells();
+                // Envía la celda activa al servidor para marcarla en la matriz del servicio
+                this.websocketService.sendMessage('activeCell', this.activeCell);
+            } else {
+                // Agrega alguna lógica aquí si es necesario
+            }
         }
-      }
-      // Pinta la celda en la matriz del jugador y en naranja
-      this.paintCellOk(nRow, nCol, this.activeCell.clr);
-      this.paintCellOk(nRow, nCol, 'orange');
-      this.orangeCells.push(this.activeCell);
+        // Pinta la celda en la matriz del jugador y en naranja
+        this.paintCellOk(nRow, nCol, this.activeCell.clr);
+        this.paintCellOk(nRow, nCol, 'orange');
+        this.orangeCells.push(this.activeCell);
     }
-  }  
+}
+
   
   // Método para limpiar las celdas del jugador y restablecer las celdas visitadas y pintadas de naranja
   clearPlayerCells(): void {
