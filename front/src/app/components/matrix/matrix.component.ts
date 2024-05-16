@@ -183,12 +183,12 @@ export class MatrixComponent implements OnInit {
       this.paintCellOk(cell.row, cell.col, cell.clr);
     });
     this.websocketService.sendMessage('getTop', {});
-    this.paintMatrixMin();
   }
 
   private handleGetTop(data: any): void {
     this.topPlayers = data;
     this.paintMatrixTop();
+    this.paintMatrixMin();
   }
 
 

@@ -8,6 +8,7 @@ import { WebsocketController } from './controllers/websocket.controller';
 const numCPUs = require('os').cpus().length;
 const app = express();
 const port = 3000;
+const webSocketController = '';
 
 // Verifica si el proceso actual es el proceso maestro
 if (cluster.isMaster) {
@@ -36,7 +37,7 @@ if (cluster.isMaster) {
 
     const matrixController = new MatrixController(wss);
 
-    new WebsocketController(wss, matrixController);
+    const webSocketController = new WebsocketController(wss, matrixController);
 
     server.listen(port, () => {
         console.log(`Worker ${process.pid} started`);
