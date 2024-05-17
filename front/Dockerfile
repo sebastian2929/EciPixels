@@ -4,14 +4,18 @@ FROM node:18.16.0 AS build
 # Establece el directorio de trabajo en /app
 WORKDIR /app
 
-# Copia package.json y package-lock.json antes de instalar dependencias
+# Copia solo los archivos necesarios
 COPY package*.json ./
 
 # Instala las dependencias
 RUN npm install --ignore-scripts
 
-# Copia el resto de los archivos del proyecto Angular
-COPY . .
+# Copia los archivos del proyecto Angular necesarios para la construcción
+COPY src/ ./src/
+COPY angular.json .
+COPY tsconfig.json .
+COPY tslint.json .
+# Agrega cualquier otro archivo necesario para la construcción de Angular
 
 # Construye la aplicación Angular en modo de producción
 RUN npm run build -- --configuration=production
@@ -22,7 +26,7 @@ FROM nginx:alpine
 # Crea un usuario y grupo no root
 RUN addgroup -S appuser && adduser -S -G appuser appuser
 
-# Copia los archivos estáticos de la primera etapa
+# Copia los archivos estáticos construidos en la primera etapa
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # Cambia la propiedad de los archivos a appuser
@@ -31,7 +35,7 @@ RUN chown -R appuser:appuser /usr/share/nginx/html
 # Cambia al nuevo usuario no root
 USER appuser
 
-# Expón el puerto 80
+# Expone el puerto 80
 EXPOSE 80
 
 # Comando para iniciar Nginx

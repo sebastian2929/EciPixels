@@ -3,14 +3,22 @@ FROM node:18.16.0
 # Establece el directorio de trabajo en /app
 WORKDIR /app
 
-# Copia package.json y package-lock.json antes de instalar dependencias
+# Copia solo los archivos necesarios de la aplicación
 COPY package*.json ./
 
 # Instala las dependencias
 RUN npm install --ignore-scripts
 
-# Copia el resto de los archivos de la aplicación
-COPY . .
+# Crea directorios para la aplicación
+RUN mkdir src
+RUN mkdir public
+RUN mkdir views
+# Agrega cualquier otro directorio necesario aquí
+
+# Copia el contenido de cada directorio
+COPY src/ ./src/
+COPY public/ ./public/
+COPY views/ ./views/
 
 # Crea un usuario y grupo no root
 RUN groupadd -r appuser && useradd -r -g appuser appuser
