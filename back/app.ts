@@ -7,8 +7,7 @@ import { WebsocketController } from './controllers/websocket.controller';
 
 const numCPUs = require('os').cpus().length;
 const app = express();
-const port = 3000;
-const webSocketController = '';
+const port = 4000;
 
 // Verifica si el proceso actual es el proceso maestro
 if (cluster.isMaster) {

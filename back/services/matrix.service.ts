@@ -14,8 +14,8 @@ export class MatrixService {
   topPlayers: [string, string, number][] = [];
   matrix: string[][] = [];
   visitedCells: Cell[] = [];
-  rows = 50;
-  cols = 50;
+  rows = 250;
+  cols = 250;
   backgrounColor = '#383838';
 
   public async getMatrixIni(mNam: string): Promise<{ matrix: string[][], activeCell: Cell }> {

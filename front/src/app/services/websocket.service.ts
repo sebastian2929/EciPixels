@@ -9,9 +9,8 @@ export class WebsocketService {
   private socket$: WebSocketSubject<any>; 
   constructor() {
     // Inicializar el WebSocketSubject con la URL del servidor WebSocket
-    this.socket$ = webSocket('ws://localhost:3000'); // URL del servidor WebSocket
+    this.socket$ = webSocket('ws://52.186.183.124:4000/'); // URL del servidor WebSocket
   }
-
   /**
    * Envía un mensaje al servidor WebSocket.
    * @param action Acción a realizar en el servidor.
